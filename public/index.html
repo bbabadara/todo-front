@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App - Infrastructure DevOps</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 40px; width: 100%; max-width: 500px; }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 2em; }
+        .env-badge { text-align: center; margin-bottom: 20px; }
+        .env-badge span { background: #667eea; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 30px; }
+        input[type="text"] { flex: 1; padding: 12px 20px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; transition: border-color 0.3s; }
+        input[type="text"]:focus { outline: none; border-color: #667eea; }
+        button { padding: 12px 25px; background: #667eea; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #5a6fd6; }
+        .todo-list { list-style: none; }
+        .todo-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; transition: transform 0.2s; }
+        .todo-item:hover { transform: translateX(5px); }
+        .todo-item.completed span { text-decoration: line-through; color: #999; }
+        .todo-item span { flex: 1; font-size: 16px; }
+        .delete-btn { background: #ff6b6b; padding: 8px 12px; font-size: 14px; }
+        .delete-btn:hover { background: #ee5a5a; }
+        .status { text-align: center; color: #999; margin-top: 20px; font-size: 0.9em; }
+        .stats { display: flex; justify-content: space-around; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; }
+        .stat { text-align: center; }
+        .stat-num { font-size: 24px; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Todo App</h1>
+        <div class="env-badge"><span id="env-badge">__ENV_NAME__</span></div>
+        
+        <div class="input-group">
+            <input type="text" id="todoInput" placeholder="Ajouter une tâche..." onkeypress="if(event.key==='Enter')addTodo()">
+            <button onclick="addTodo()">Ajouter</button>
+        </div>
+        
+        <ul class="todo-list" id="todoList"></ul>
+        
+        <div class="stats">
+            <div class="stat"><div class="stat-num" id="total">0</div><div class="stat-label">Total</div></div>
+            <div class="stat"><div class="stat-num" id="done">0</div><div class="stat-label">Terminées</div></div>
+            <div class="stat"><div class="stat-num" id="pending">0</div><div class="stat-label">En cours</div></div>
+        </div>
+        
+        <div class="status">Infrastructure: Terraform + Ansible | Monitoring: Prometheus + Grafana | Données: Supabase</div>
+    </div>
+
+    <script>
+        const API = '/api/todos';
+        let todos = [];
+
+        async function fetchTodos() {
+            const res = await fetch(API);
+            todos = await res.json();
+            render();
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const title = input.value.trim();
+            if (!title) return;
+            await fetch(API, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title}) });
+            input.value = '';
+            fetchTodos();
+        }
+
+        async function toggleTodo(id, completed) {
+            await fetch(`${API}/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({completed: !completed}) });
+            fetchTodos();
+        }
+
+        async function deleteTodo(id) {
+            await fetch(`${API}/${id}`, { method: 'DELETE' });
+            fetchTodos();
+        }
+
+        function render() {
+            const list = document.getElementById('todoList');
+            list.innerHTML = todos.map(t => `
+                <li class="todo-item ${t.completed ? 'completed' : ''}">
+                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodo(${t.id}, ${t.completed})">
+                    <span>${t.title}</span>
+                    <button class="delete-btn" onclick="deleteTodo(${t.id})">Supprimer</button>
+                </li>
+            `).join('');
+            
+            document.getElementById('total').textContent = todos.length;
+            document.getElementById('done').textContent = todos.filter(t => t.completed).length;
+            document.getElementById('pending').textContent = todos.filter(t => !t.completed).length;
+        }
+
+        fetchTodos();
+    </script>
+</body>
+</html>

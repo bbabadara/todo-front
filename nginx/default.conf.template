@@ -1,0 +1,14 @@
+server {
+    listen       80;
+    server_name  _;
+
+    root   /usr/share/nginx/html;
+    index  index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        sub_filter '__ENV_NAME__' '${ENV_NAME}';
+        sub_filter_once on;
+        sub_filter_types text/html;
+    }
+}
